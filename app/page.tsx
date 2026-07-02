@@ -56,7 +56,7 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            Documentation del tino 7 am
+            Documentation del tino 7.12 Kali am
           </a>
         </div>
       </main>
