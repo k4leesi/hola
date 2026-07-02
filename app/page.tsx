@@ -16,7 +16,7 @@ export default function Home() {
      
 
           <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            Hola mundo...!  soy Kali
+            Hello world..!  I´m Kali
           </h1>
 
 
@@ -61,7 +61,7 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            Documentation del tino 7.12 Kali am
+            Documentation of K4li 7:12am
           </a>
         </div>
       </main>
