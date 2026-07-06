@@ -172,7 +172,7 @@ export default function DashboardSismos() {
       </div>
 
       {/* Mapa */}
-      
+
       <div className="w-full max-w-3xl h-96 bg-gray-800 p-4 rounded-lg shadow-lg">
         {isClient && lat && lon && (
           <MapContainer center={[lat, lon]} zoom={15} className="h-full w-full">
@@ -182,6 +182,8 @@ export default function DashboardSismos() {
                 <strong>Micro:bit Tacna</strong>
                 <br />
                 Ubicación: Tacna, Perú
+                <br />
+                Por:  Kali
               </Popup>
             </Marker>
           </MapContainer>
