@@ -1,67 +1,194 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+import { Line } from "react-chartjs-2";
+import "chart.js/auto";
+import dynamic from "next/dynamic";
+import "leaflet/dist/leaflet.css";
+
+// Import dinámico con ssr: false
+const MapContainer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Popup),
+  { ssr: false }
+);
+
+// Cliente Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_KEY!
+);
+
+interface SismoRegistro {
+  timestamp: string;
+  axis_x: number;
+  axis_y: number;
+  axis_z: number;
+  magnitude: number;
+}
+
+export default function DashboardSismos() {
+  const [data, setData] = useState<SismoRegistro[]>([]);
+  const [isClient, setIsClient] = useState(false);
+
+  const lat = Number(process.env.NEXT_PUBLIC_UBIGEO_LAT);
+  const lon = Number(process.env.NEXT_PUBLIC_UBIGEO_LON);
+
+  useEffect(() => {
+    setIsClient(true);
+
+    const fetchLatest = async () => {
+      const { data: registros, error } = await supabase
+        .from("sismos")
+        .select("timestamp, axis_x, axis_y, axis_z, magnitude")
+        .order("timestamp", { ascending: false })
+        .limit(200);
+
+      if (!error && registros) {
+        // invertimos para que queden en orden cronológico
+        setData(registros.reverse() as SismoRegistro[]);
+      }
+    };
+
+    // carga inicial
+    fetchLatest();
+
+    // refrescar cada 5 segundos
+    const interval = setInterval(fetchLatest, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const labels = data.map((d) =>
+    new Date(d.timestamp).toLocaleTimeString()
+  );
+  const dataX = data.map((d) => d.axis_x);
+  const dataY = data.map((d) => d.axis_y);
+  const dataZ = data.map((d) => d.axis_z);
+  const dataMagnitude = data.map((d) => d.magnitude);
+
+  // Gráfico de aceleraciones
+  const chartDataAxes = {
+    labels,
+    datasets: [
+      {
+        label: "Eje X",
+        data: dataX,
+        borderColor: "#ef4444",
+        backgroundColor: "rgba(239, 68, 68, 0.2)",
+        tension: 0.3,
+      },
+      {
+        label: "Eje Y",
+        data: dataY,
+        borderColor: "#22c55e",
+        backgroundColor: "rgba(34, 197, 94, 0.2)",
+        tension: 0.3,
+      },
+      {
+        label: "Eje Z",
+        data: dataZ,
+        borderColor: "#22d3ee",
+        backgroundColor: "rgba(34, 211, 238, 0.2)",
+        tension: 0.3,
+      },
+    ],
+  };
+
+  const chartOptionsAxes = {
+    responsive: true,
+    animation: { duration: 0 },
+    scales: {
+      y: {
+        title: { display: true, text: "Aceleración (mg)" },
+      },
+      x: {
+        title: { display: true, text: "Tiempo" },
+      },
+    },
+    plugins: {
+      legend: { labels: { color: "#fff" } },
+    },
+  };
+
+  // Gráfico de magnitud
+  const chartDataMagnitude = {
+    labels,
+    datasets: [
+      {
+        label: "Magnitud simulada",
+        data: dataMagnitude,
+        borderColor: "#facc15",
+        backgroundColor: "rgba(250, 204, 21, 0.2)",
+        tension: 0.3,
+      },
+    ],
+  };
+
+  const chartOptionsMagnitude = {
+    responsive: true,
+    animation: { duration: 0 },
+    scales: {
+      y: {
+        min: 0,
+        max: 10,
+        title: { display: true, text: "Magnitud (0–10)" },
+      },
+      x: {
+        title: { display: true, text: "Tiempo" },
+      },
+    },
+    plugins: {
+      legend: { labels: { color: "#fff" } },
+    },
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-     
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            Hello world..!  I´m Kali
-          </h1>
+    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-6 space-y-8">
+      <h1 className="text-3xl font-bold text-cyan-400">
+        Dashboard Sísmico en Tiempo Real
+      </h1>
 
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://github.com/k4leesi"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation of K4li 7:12am
-          </a>
-        </div>
-      </main>
+      {/* Gráfico de aceleraciones */}
+      <div className="w-full max-w-3xl bg-gray-800 p-4 rounded-lg shadow-lg">
+        <Line data={chartDataAxes} options={chartOptionsAxes} />
+      </div>
+
+      {/* Gráfico de magnitud */}
+      <div className="w-full max-w-3xl bg-gray-800 p-4 rounded-lg shadow-lg">
+        <Line data={chartDataMagnitude} options={chartOptionsMagnitude} />
+      </div>
+
+      {/* Mapa */}
+      
+      <div className="w-full max-w-3xl h-96 bg-gray-800 p-4 rounded-lg shadow-lg">
+        {isClient && lat && lon && (
+          <MapContainer center={[lat, lon]} zoom={15} className="h-full w-full">
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <Marker position={[lat, lon]}>
+              <Popup>
+                <strong>Micro:bit Tacna</strong>
+                <br />
+                Ubicación: Tacna, Perú
+              </Popup>
+            </Marker>
+          </MapContainer>
+        )}
+      </div>
+
+      <p className="text-gray-400">Últimos 200 datos refrescados cada 5 segundos desde Supabase</p>
     </div>
   );
 }
